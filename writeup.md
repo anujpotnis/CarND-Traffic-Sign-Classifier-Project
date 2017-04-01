@@ -54,13 +54,8 @@ n_classes = np.unique(y_train).shape[0] # 43
 
 ####2. Include an exploratory visualization of the dataset and identify where the code is in your code file.
 
-The code for this step is contained in the third code cell of the IPython notebook.  
-
-Here is an exploratory visualization of the data set. It is a bar chart showing how the data ...
-
 ```python
 # Data exploration visualization code
-
 np.random.seed(0)
 fig, axes = plt.subplots(4, 4, figsize=(12, 6),
                          subplot_kw={'xticks': [], 'yticks': []})
@@ -72,8 +67,6 @@ for idx in range(16):
     axes[idx].imshow(X_train[sign])
     axes[idx].set_title(y_train[sign])
 ```
-
-
 
 <p align="center">
   <img src="writeup_data/sign_visualize.png" alt="Signboard Visualization"/>
@@ -96,15 +89,45 @@ plt.show()
 
 ####1. Describe how, and identify where in your code, you preprocessed the image data. What tecniques were chosen and why did you choose these techniques? Consider including images showing the output of each preprocessing technique. Pre-processing refers to techniques such as converting to grayscale, normalization, etc.
 
-The code for this step is contained in the fourth code cell of the IPython notebook.
+The data was normalized between -1 and +1. This significantly improved the accuracy. The weights in the neural network are typically between -1 and +1. Therefore normalizing the input data to that range allowed the network to converge with better accuracy.
 
-As a first step, I decided to convert the images to grayscale because ...
+An attempt was made to subtract the mean from every image. The idea was to center the data around 0. However this reduced the accuracy and hence was not used in the submitted code.
 
-Here is an example of a traffic sign image before and after grayscaling.
+Grayscale was not used since color information plays a vital role in the recognition of signboards.
 
-![alt text][image2]
+```python
+# Preprocess the data
 
-As a last step, I normalized the image data because ...
+def normalize(img):
+    img = img/127.5-1.
+    print(np.min(img))
+    return img
+
+# def mean_substract(img):
+#     img = img - np.mean(img)
+#     return img
+```
+
+```python
+# X_train = mean_substract(X_train)
+# X_valid = mean_substract(X_valid)
+# X_test = mean_substract(X_test)
+
+X_train = normalize(X_train)
+X_valid = normalize(X_valid)
+X_test = normalize(X_test)
+```
+### Normalized Signboard Images
+
+<p align="center">
+  <img src="writeup_data/sign_visualize_norm.png" alt="Normalized", height="400"/>
+</p>
+
+### Mean Subtracted Signboard Images
+
+<p align="center">
+  <img src="writeup_data/sign_visualize_mean_sub.png" alt="Mean Subtract", height="400"/>
+</p>
 
 ####2. Describe how, and identify where in your code, you set up training, validation and testing data. How much data was in each set? Explain what techniques were used to split the data into these sets. (OPTIONAL: As described in the "Stand Out Suggestions" part of the rubric, if you generated additional data for training, describe why you decided to generate additional data, how you generated the data, identify where in your code, and provide example images of the additional data)
 
@@ -125,29 +148,77 @@ The difference between the original data set and the augmented data set is the f
 
 ####3. Describe, and identify where in your code, what your final model architecture looks like including model type, layers, layer sizes, connectivity, etc.) Consider including a diagram and/or table describing the final model.
 
-The code for my final model is located in the seventh cell of the ipython notebook. 
+```python
+def TrafficSignClassifier_LeNet(x):    
+    # Hyperparameters
+    mu = 0
+    sigma = 0.1
 
-My final model consisted of the following layers:
+    # Layer 1: Convolutional. Input = 32x32x3. Output = 28x28x6.
+    conv1_W = tf.Variable(tf.truncated_normal(shape=(5, 5, 3, 6), mean = mu, stddev = sigma))
+    conv1_b = tf.Variable(tf.zeros(6))
+    conv1   = tf.nn.conv2d(x, conv1_W, strides=[1, 1, 1, 1], padding='VALID') + conv1_b
+
+    # Activation.
+    conv1 = tf.nn.relu(conv1)
+
+    # Pooling. Input = 28x28x6. Output = 14x14x6.
+    conv1 = tf.nn.max_pool(conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')
+.
+.
+.
+  # Layer 5: Fully Connected. Input = 84. Output = 43.
+      fc3_W  = tf.Variable(tf.truncated_normal(shape=(84, n_classes), mean = mu, stddev = sigma))
+      fc3_b  = tf.Variable(tf.zeros(43))
+      logits = tf.matmul(fc2, fc3_W) + fc3_b
+
+      return logits
+```
+
+
+
+The architecture summary is as follows:
 
 |      Layer      |               Description                |
 | :-------------: | :--------------------------------------: |
 |      Input      |            32x32x3 RGB image             |
-| Convolution 3x3 | 1x1 stride, same padding, outputs 32x32x64 |
+| Convolution 5x5 | 1x1 stride, valid padding, outputs 28x28x6 |
 |      RELU       |                                          |
-|   Max pooling   |      2x2 stride,  outputs 16x16x64       |
-| Convolution 3x3 |                   etc.                   |
-| Fully connected |                   etc.                   |
-|     Softmax     |                   etc.                   |
-|                 |                                          |
-|                 |                                          |
+|   Max pooling   |       2x2 stride,  outputs 14x14x6       |
+| Convolution 5x5 | 1x1 stride, valid padding, outputs 10x10x16 |
+|      RELU       |                                          |
+|   Max Pooling   |       2x2 stride,  outputs 5x5x16        |
+|     Flatten     |                output 400                |
+| Fully Connected |                output 120                |
+|      RELU       |                                          |
+| Fully Connected |                output 84                 |
+|      RELU       |                                          |
+| Fully Connected |                output 43                 |
 
 
 
 ####4. Describe how, and identify where in your code, you trained your model. The discussion can include the type of optimizer, the batch size, number of epochs and any hyperparameters such as learning rate.
 
-The code for training the model is located in the eigth cell of the ipython notebook. 
+```python
+# Configure training parameters
 
-To train the model, I used an ....
+rate = 0.001
+EPOCHS = 10
+BATCH_SIZE = 128
+
+logits = TrafficSignClassifier_LeNet(x)
+probability = tf.nn.softmax(logits)
+cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits, one_hot_y)
+loss_operation = tf.reduce_mean(cross_entropy)
+optimizer = tf.train.AdamOptimizer(learning_rate = rate)
+training_operation = optimizer.minimize(loss_operation)
+```
+
+The model was trained at an initial low rate of 0.001. This ensured a slow but stable learning. Also, the Adam Optimizer controls the rate.10 epochs were sufficient as the accuracy did not improved after that. A batch size of 128 was optimal considering the memory size of the GPU used.
+
+An Adam optimizer was used since it adaptively computes the learning rate. Adam works well in practive.
+
+
 
 ####5. Describe the approach taken for finding a solution. Include in the discussion the results on the training, validation and test sets and where in the code these were calculated. Your approach may have been an iterative process, in which case, outline the steps you took to get to the final solution and why you chose those steps. Perhaps your solution involved an already well known implementation or architecture. In this case, discuss why you think the architecture is suitable for the current problem.
 
