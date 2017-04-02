@@ -6,18 +6,23 @@
 
 The goals / steps of this project are the following:
 * Load the data set (see below for links to the project data set)
-
 * Explore, summarize and visualize the data set
-
 * Design, train and test a model architecture
-
 * Use the model to make predictions on new images
-
 * Analyze the softmax probabilities of the new images
-
 * Summarize the results with a written report
 
-  ​
+[//]: # "Image References"
+
+[image1]: ./examples/visualization.jpg "Visualization"
+[image2]: ./examples/grayscale.jpg "Grayscaling"
+[image3]: ./examples/random_noise.jpg "Random Noise"
+[image4]: ./writeup_data/extra_signs_plot.png "Extra"
+[image5]: ./examples/placeholder.png "Traffic Sign 2"
+[image6]: ./examples/placeholder.png "Traffic Sign 3"
+[image7]: ./examples/placeholder.png "Traffic Sign 4"
+[image8]: ./examples/placeholder.png "Traffic Sign 5"
+
 
 
 ## Rubric Points
@@ -222,12 +227,14 @@ An Adam optimizer was used since it adaptively computes the learning rate. Adam 
 
 ####5. Describe the approach taken for finding a solution. Include in the discussion the results on the training, validation and test sets and where in the code these were calculated. Your approach may have been an iterative process, in which case, outline the steps you took to get to the final solution and why you chose those steps. Perhaps your solution involved an already well known implementation or architecture. In this case, discuss why you think the architecture is suitable for the current problem.
 
-The code for calculating the accuracy of the model is located in the ninth cell of the Ipython notebook.
+The final model results were as follows:
 
-My final model results were:
-* training set accuracy of ?
-* validation set accuracy of ? 
-* test set accuracy of ?
+|  Dataset   | Accuracy (%) |
+| :--------: | :----------: |
+| Validation |              |
+|  Testing   |     89.3     |
+
+
 
 If an iterative approach was chosen:
 * What was the first architecture that was tried and why was it chosen?
@@ -242,47 +249,96 @@ If a well known architecture was chosen:
 * How does the final model's accuracy on the training, validation and test set provide evidence that the model is working well?
 
 
+```python
+with tf.Session() as sess:
+    sess.run(tf.global_variables_initializer())
+    num_examples = len(X_train)
+    
+    print("Training...")
+    print()
+    for i in range(EPOCHS):
+        X_train, y_train = shuffle(X_train, y_train)
+        for offset in range(0, num_examples, BATCH_SIZE):
+            end = offset + BATCH_SIZE
+            batch_x, batch_y = X_train[offset:end], y_train[offset:end]
+            sess.run(training_operation, feed_dict={x: batch_x, y: batch_y})
+            
+        validation_accuracy = evaluate(X_valid, y_valid)
+        print("EPOCH {} ...".format(i+1))
+        print("Validation Accuracy = {:.3f}".format(validation_accuracy))
+        print()
+        
+    saver.save(sess, './traffic-sign-classifier')
+    print("Model saved")
+```
+
+MaxPooling was used to reduce the size of the input and also to prevent overfitting. Reducing overfitting is a consequence of reducing the output size, which in turn, reduces the number of parameters in future layers. Pooling however results in loss of information.
+
 ###Test a Model on New Images
 
 ####1. Choose five German traffic signs found on the web and provide them in the report. For each image, discuss what quality or qualities might be difficult to classify.
 
 Here are five German traffic signs that I found on the web:
 
-![alt text][image4] ![alt text][image5] ![alt text][image6] 
-![alt text][image7] ![alt text][image8]
+![alt text][image4]
 
-The first image might be difficult to classify because ...
+For image 35 and 39 both are very similar. In fact they are rotated with respect to each other. If the features extracted are rotation invariant, then this could be an issue.
+
+Images 0 and 1 are very simlar if observed in gray scale. However the color is an important cue to distinguish the two.
+
+Image 24 is very diffiucult because the straight line and bent lines look very similar.
+
+Image 14 (stop sign) is probably the easiest given its color and shape.
 
 ####2. Discuss the model's predictions on these new traffic signs and compare the results to predicting on the test set. Identify where in your code predictions were made. At a minimum, discuss what the predictions were, the accuracy on these new predictions, and compare the accuracy to the accuracy on the test set (OPTIONAL: Discuss the results in more detail as described in the "Stand Out Suggestions" part of the rubric).
 
-The code for making predictions on my final model is located in the tenth cell of the Ipython notebook.
+```python
+with tf.Session() as sess:
+    saver.restore(sess, tf.train.latest_checkpoint('.'))
+    test_accuracy = evaluate(X_test_extra, y_test_extra)
+    print("Test Accuracy = {:.3f}".format(test_accuracy))
+    predict = sess.run(tf.nn.softmax(logits), feed_dict={x:X_test_extra})
+    extra_top_k = sess.run(tf.nn.top_k(predict, 3))
+    print(extra_top_k)
+```
+
+```python
+Test Accuracy = 0.500
+TopKV2(values=array([[  9.99989271e-01,   1.07576752e-05,   1.81459237e-10],
+       [  1.00000000e+00,   3.44600000e-13,   3.01434377e-15],
+       [  9.99995232e-01,   4.76954938e-06,   5.29957615e-14],
+       [  8.34361315e-01,   1.10247456e-01,   5.50773032e-02],
+       [  9.99999881e-01,   1.54358403e-07,   7.21939708e-09],
+       [  1.00000000e+00,   7.82284282e-09,   6.24167567e-16]], dtype=float32), indices=array([[35, 36, 34],
+       [39, 33, 37],
+       [18, 26, 27],
+       [28, 23, 18],
+       [34, 40, 38],
+       [14, 17, 29]], dtype=int32))
+```
 
 Here are the results of the prediction:
 
-|     Image     |  Prediction   |
-| :-----------: | :-----------: |
-|   Stop Sign   |   Stop sign   |
-|    U-turn     |    U-turn     |
-|     Yield     |     Yield     |
-|   100 km/h    |  Bumpy Road   |
-| Slippery Road | Slippery Road |
+|           Image           |   Prediction    |
+| :-----------------------: | :-------------: |
+|        Ahead Only         |   Ahead Only    |
+|         Keep Left         |    Keep Left    |
+| Road Narrows on the Right | General Caution |
+|          20 km/h          | Child Crossing  |
+|          30 km/h          | Turn Left Ahead |
+|           Stop            |      Stop       |
 
 
-The model was able to correctly guess 4 of the 5 traffic signs, which gives an accuracy of 80%. This compares favorably to the accuracy on the test set of ...
+The model was able to correctly guess 3of the 6 traffic signs, which gives an accuracy of 50%. The accuracy is lower than the test set since these are of different image quality. Even the colors are more saturated.
 
 ####3. Describe how certain the model is when predicting on each of the five new images by looking at the softmax probabilities for each prediction and identify where in your code softmax probabilities were outputted. Provide the top 5 softmax probabilities for each image along with the sign type of each probability. (OPTIONAL: as described in the "Stand Out Suggestions" part of the rubric, visualizations can also be provided such as bar charts)
 
-The code for making predictions on my final model is located in the 11th cell of the Ipython notebook.
+For the stop sign image, the model is sure that this is a stop sign (probability of 1), and the image does contain a stop sign. The top three soft max probabilities were:
 
-For the first image, the model is relatively sure that this is a stop sign (probability of 0.6), and the image does contain a stop sign. The top five soft max probabilities were
-
-| Probability |  Prediction   |
-| :---------: | :-----------: |
-|     .60     |   Stop sign   |
-|     .20     |    U-turn     |
-|     .05     |     Yield     |
-|     .04     |  Bumpy Road   |
-|     .01     | Slippery Road |
+| Probability |    Prediction     |
+| :---------: | :---------------: |
+|      1      |     Stop sign     |
+|      0      |     No Entry      |
+|      0      | Bicycles crossing |
 
 
-For the second image ... 
