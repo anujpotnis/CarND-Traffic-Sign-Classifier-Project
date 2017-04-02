@@ -347,47 +347,117 @@ with tf.Session() as sess:
     test_accuracy = evaluate(X_test_extra, y_test_extra)
     print("Test Accuracy = {:.3f}".format(test_accuracy))
     predict = sess.run(tf.nn.softmax(logits), feed_dict={x:X_test_extra})
-    extra_top_k = sess.run(tf.nn.top_k(predict, 3))
+    extra_top_k = sess.run(tf.nn.top_k(predict, 5))
     print(extra_top_k)
 ```
 
 ```python
 Test Accuracy = 0.500
-TopKV2(values=array([[  9.99989271e-01,   1.07576752e-05,   1.81459237e-10],
-       [  1.00000000e+00,   3.44600000e-13,   3.01434377e-15],
-       [  9.99995232e-01,   4.76954938e-06,   5.29957615e-14],
-       [  8.34361315e-01,   1.10247456e-01,   5.50773032e-02],
-       [  9.99999881e-01,   1.54358403e-07,   7.21939708e-09],
-       [  1.00000000e+00,   7.82284282e-09,   6.24167567e-16]], dtype=float32), indices=array([[35, 36, 34],
-       [39, 33, 37],
-       [18, 26, 27],
-       [28, 23, 18],
-       [34, 40, 38],
-       [14, 17, 29]], dtype=int32))
+TopKV2(values=array([[  1.00000000e+00,   1.10395457e-32,   0.00000000e+00,
+          0.00000000e+00,   0.00000000e+00],
+       [  1.00000000e+00,   7.11453178e-22,   6.16860040e-25,
+          1.90303391e-27,   3.39929813e-28],
+       [  1.00000000e+00,   4.37592607e-26,   7.63698168e-27,
+          1.41077491e-30,   1.87079720e-32],
+       [  9.99432027e-01,   5.67785988e-04,   2.03307906e-07,
+          8.08902506e-14,   1.06146860e-17],
+       [  9.93793964e-01,   6.11506449e-03,   9.10192684e-05,
+          9.41316469e-12,   7.82343686e-14],
+       [  1.00000000e+00,   5.56322002e-11,   9.76419813e-12,
+          5.37148278e-20,   8.36421203e-23]], dtype=float32), indices=array([[35, 40,  0,  1,  2],
+       [39, 37, 40,  2, 33],
+       [18, 24, 27, 26, 11],
+       [36,  1,  3, 35, 19],
+       [18, 38, 34, 25, 37],
+       [14,  1, 17, 25, 13]], dtype=int32))
 ```
 
 Here are the results of the prediction:
 
-|           Image           |   Prediction    |
-| :-----------------------: | :-------------: |
-|        Ahead Only         |   Ahead Only    |
-|         Keep Left         |    Keep Left    |
-| Road Narrows on the Right | General Caution |
-|          20 km/h          | Child Crossing  |
-|          30 km/h          | Turn Left Ahead |
-|           Stop            |      Stop       |
+|             Image              |   Prediction    |
+| :----------------------------: | :-------------: |
+|        Ahead Only (35)         |   Ahead Only    |
+|         Keep Left (39)         |    Keep Left    |
+| Road Narrows on the Right (24) | General Caution |
+|          20 km/h (0)           | Child Crossing  |
+|          30 km/h (1)           | Turn Left Ahead |
+|           Stop (14)            |      Stop       |
 
 
 The model was able to correctly guess 3 of the 6 traffic signs, which gives an accuracy of 50%. The accuracy is lower than the test set since these are of different image quality. Even the colors are more saturated.
 
 ####3. Describe how certain the model is when predicting on each of the five new images by looking at the softmax probabilities for each prediction and identify where in your code softmax probabilities were outputted. Provide the top 5 softmax probabilities for each image along with the sign type of each probability. (OPTIONAL: as described in the "Stand Out Suggestions" part of the rubric, visualizations can also be provided such as bar charts)
 
-For the stop sign image, the model is sure that this is a stop sign (probability of 1), and the image does contain a stop sign. The top three soft max probabilities were:
+1. Ahead Only (35)
 
-| Probability |    Prediction     |
-| :---------: | :---------------: |
-|      1      |     Stop sign     |
-|      0      |     No Entry      |
-|      0      | Bicycles crossing |
+This sign could have been predicted correctly because of the distinct arrow in the middle.
+
+| Probability |   Prediction    |
+| :---------: | :-------------: |
+|      1      | Ahead Only (35) |
+|      0      | Keep Right (40) |
+|      0      |   20 km/h (0)   |
+|      0      |   30 km/h (1)   |
+|      0      |   50 km/h (2)   |
+
+2. Keep Left (39)
+
+This sign could have been predicted correctly because of the distinct arrow in the middle.
+
+| Probability |        Prediction         |
+| :---------: | :-----------------------: |
+|      1      |      Keep Left (39)       |
+|      0      | Go Straight or Right (36) |
+|      0      |      Keep Right (40)      |
+|      0      |        50 km/h (2)        |
+|      0      |   Turn Right Ahead (33)   |
+
+3. Road Narrows on the Right (24)
+
+This was predicted in the top-5.
+
+| Probability |               Prediction               |
+| :---------: | :------------------------------------: |
+|      1      |          General Caution (18)          |
+|      0      |   Road Narrows on the the Right (24)   |
+|      0      |            Pedestrians (27)            |
+|      0      |          Traffic Signals (26)          |
+|      0      | Right of way at NExt Intersection (11) |
+
+4. 20 km/h (0)
+
+It is possible that this was confused with the 30 km/h or the 60 km/h.
+
+| Probability |            Prediction            |
+| :---------: | :------------------------------: |
+|      1      |    Go Straight or Right (36)     |
+|      0      |           30 km/h (1)            |
+|      0      |           60 km/h (3)            |
+|      0      |         Ahead Only (35)          |
+|      0      | Dangerous Curve to the Left (19) |
+
+5. 30 km/h (1)
+
+This was not predicted correctly. This could be possible because the training images differed significantly.
+
+| Probability |        Prediction        |
+| :---------: | :----------------------: |
+|      1      |   General Caution (18)   |
+|      0      |     Keep Right (38)      |
+|      0      |   Turn Left Ahead (34)   |
+|      0      |      Road Work (25)      |
+|      0      | Go Straight or Left (37) |
+
+
+6. Stop (14) 
+   For the stop sign image, the model is sure that this is a stop sign (probability of 1)
+
+| Probability |            Prediction             |
+| :---------: | :-------------------------------: |
+|      1      | Stop sign (14) 14,  1, 17, 25, 13 |
+|      0      |            30 km/h (1)            |
+|      0      |           No Entry (17)           |
+|      0      |          Road Work (25)           |
+|      0      |            Yield (13)             |
 
 
