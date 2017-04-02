@@ -1,3 +1,5 @@
+
+
 #*Writeup CarND-Traffic-Sign-Recognition** 
 
 ---
@@ -44,6 +46,9 @@ Numpy was used to calculate the summary statistics of the traffic signs data set
 ```python
 # Number of training examples
 n_train = y_train.shape[0] # 34799
+
+# Number of validation examples
+n_valid = y_valid.shape[0] # 4410
 
 # Number of testing examples.
 n_test = y_test.shape[0] # 12630
@@ -136,19 +141,26 @@ X_test = normalize(X_test)
 
 ####2. Describe how, and identify where in your code, you set up training, validation and testing data. How much data was in each set? Explain what techniques were used to split the data into these sets. (OPTIONAL: As described in the "Stand Out Suggestions" part of the rubric, if you generated additional data for training, describe why you decided to generate additional data, how you generated the data, identify where in your code, and provide example images of the additional data)
 
-The code for splitting the data into training and validation sets is contained in the fifth code cell of the IPython notebook.  
+Training, Validation and Testing data was loaded from the pickle files. The Validation data is between 10-20%.
 
-To cross validate my model, I randomly split the training data into a training set and validation set. I did this by ...
+```python
+training_file = './traffic-signs-data/train.p'
+validation_file = './traffic-signs-data/valid.p' 
+testing_file = './traffic-signs-data/test.p'
 
-My final training set had X number of images. My validation set and test set had Y and Z number of images.
+with open(training_file, mode='rb') as f:
+    train = pickle.load(f)
+with open(validation_file, mode='rb') as f:
+    valid = pickle.load(f)
+with open(testing_file, mode='rb') as f:
+    test = pickle.load(f)
+    
+X_train, y_train = train['features'], train['labels']
+X_valid, y_valid = valid['features'], valid['labels']
+X_test, y_test = test['features'], test['labels']
+```
 
-The sixth code cell of the IPython notebook contains the code for augmenting the data set. I decided to generate additional data because ... To add more data to the the data set, I used the following techniques because ... 
-
-Here is an example of an original image and an augmented image:
-
-![alt text][image3]
-
-The difference between the original data set and the augmented data set is the following ... 
+ 
 
 
 ####3. Describe, and identify where in your code, what your final model architecture looks like including model type, layers, layer sizes, connectivity, etc.) Consider including a diagram and/or table describing the final model.
@@ -231,23 +243,24 @@ The final model results were as follows:
 
 |  Dataset   | Accuracy (%) |
 | :--------: | :----------: |
-| Validation |              |
-|  Testing   |     89.3     |
+| Validation |     94.2     |
+|  Testing   |     93.3     |
 
+The LeNet architecture was used. This architecture was chosen since it had worked succussfully in the classification of numbers. It was interesting to see how an existing architecture can be modified to solve a problem which was similat but not the same as the original. In this case, the original problem had graysclae images and 10 output numbers. In this project the images used were color with 43 categories.
 
+```python
+# Layer 1: Convolutional. Input = 32x32x3. Output = 28x28x6.
+    conv1_W = tf.Variable(tf.truncated_normal(shape=(5, 5, 3, 6), mean = mu, stddev = sigma))
+    conv1_b = tf.Variable(tf.zeros(6))
+    conv1   = tf.nn.conv2d(x, conv1_W, strides=[1, 1, 1, 1], padding='VALID') + conv1_b
+```
 
-If an iterative approach was chosen:
-* What was the first architecture that was tried and why was it chosen?
-* What were some problems with the initial architecture?
-* How was the architecture adjusted and why was it adjusted? Typical adjustments could include choosing a different model architecture, adding or taking away layers (pooling, dropout, convolution, etc), using an activation function or changing the activation function. One common justification for adjusting an architecture would be due to over fitting or under fitting. A high accuracy on the training set but low accuracy on the validation set indicates over fitting; a low accuracy on both sets indicates under fitting.
-* Which parameters were tuned? How were they adjusted and why?
-* What are some of the important design choices and why were they chosen? For example, why might a convolution layer work well with this problem? How might a dropout layer help with creating a successful model?
-
-If a well known architecture was chosen:
-* What architecture was chosen?
-* Why did you believe it would be relevant to the traffic sign application?
-* How does the final model's accuracy on the training, validation and test set provide evidence that the model is working well?
-
+```python
+# Layer 5: Fully Connected. Input = 84. Output = 43.
+    fc3_W  = tf.Variable(tf.truncated_normal(shape=(84, n_classes), mean = mu, stddev = sigma))
+    fc3_b  = tf.Variable(tf.zeros(43))
+    logits = tf.matmul(fc2, fc3_W) + fc3_b
+```
 
 ```python
 with tf.Session() as sess:
@@ -271,24 +284,60 @@ with tf.Session() as sess:
     saver.save(sess, './traffic-sign-classifier')
     print("Model saved")
 ```
+The Validation accuracy was stuck at 89% for a very long time. After making multiple changes in the architecture and preprocessing it was found that the issue was with the number of epochs. 10 epochs was too less for the netwrok to converge. After increasing the epochs to 100, the validation accuracy went higher than 93%.
 
-MaxPooling was used to reduce the size of the input and also to prevent overfitting. Reducing overfitting is a consequence of reducing the output size, which in turn, reduces the number of parameters in future layers. Pooling however results in loss of information.
+```python
+EPOCH 95 ...
+Validation Accuracy = 0.910
+
+EPOCH 96 ...
+Validation Accuracy = 0.945
+
+EPOCH 97 ...
+Validation Accuracy = 0.933
+
+EPOCH 98 ...
+Validation Accuracy = 0.945
+
+EPOCH 99 ...
+Validation Accuracy = 0.944
+
+EPOCH 100 ...
+Validation Accuracy = 0.942
+
+Model saved
+```
+```python
+with tf.Session() as sess:
+    saver.restore(sess, tf.train.latest_checkpoint('.'))
+
+    test_accuracy = evaluate(X_test, y_test)
+    print("Test Accuracy = {:.3f}".format(test_accuracy))
+```
+
+```python
+Test Accuracy = 0.933
+```
+
+MaxPooling was used to reduce the size of the input and also to prevent overfitting. Reducing overfitting is a consequence of reducing the output size, which in turn, reduces the number of parameters in future layers.
 
 ###Test a Model on New Images
 
 ####1. Choose five German traffic signs found on the web and provide them in the report. For each image, discuss what quality or qualities might be difficult to classify.
 
-Here are five German traffic signs that I found on the web:
+Here are five German traffic signs that were found on the web:
 
 ![alt text][image4]
 
-For image 35 and 39 both are very similar. In fact they are rotated with respect to each other. If the features extracted are rotation invariant, then this could be an issue.
+Image 35 and 39 are very similar to each other. In fact they are rotated with respect to each other. If the features extracted are rotation invariant, then this could be an issue.
 
 Images 0 and 1 are very simlar if observed in gray scale. However the color is an important cue to distinguish the two.
 
 Image 24 is very diffiucult because the straight line and bent lines look very similar.
 
 Image 14 (stop sign) is probably the easiest given its color and shape.
+
+
 
 ####2. Discuss the model's predictions on these new traffic signs and compare the results to predicting on the test set. Identify where in your code predictions were made. At a minimum, discuss what the predictions were, the accuracy on these new predictions, and compare the accuracy to the accuracy on the test set (OPTIONAL: Discuss the results in more detail as described in the "Stand Out Suggestions" part of the rubric).
 
@@ -329,7 +378,7 @@ Here are the results of the prediction:
 |           Stop            |      Stop       |
 
 
-The model was able to correctly guess 3of the 6 traffic signs, which gives an accuracy of 50%. The accuracy is lower than the test set since these are of different image quality. Even the colors are more saturated.
+The model was able to correctly guess 3 of the 6 traffic signs, which gives an accuracy of 50%. The accuracy is lower than the test set since these are of different image quality. Even the colors are more saturated.
 
 ####3. Describe how certain the model is when predicting on each of the five new images by looking at the softmax probabilities for each prediction and identify where in your code softmax probabilities were outputted. Provide the top 5 softmax probabilities for each image along with the sign type of each probability. (OPTIONAL: as described in the "Stand Out Suggestions" part of the rubric, visualizations can also be provided such as bar charts)
 
